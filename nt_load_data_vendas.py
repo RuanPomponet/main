@@ -1,44 +1,64 @@
 # Databricks notebook source
+# MAGIC %md 
+# MAGIC #### Import libs e conexões
+
+# COMMAND ----------
+
 from pyspark import SparkFiles
 import pyspark
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 import pandas as pd
 import os
-from os import *
-from os.path import *
 import sys
 from glob import glob
 import xlsxwriter
 
 # COMMAND ----------
 
-raw = '/mnt/landing/csv'
+#Executa o notebook resposável pela conexão com azure sql server
 
 # COMMAND ----------
 
-files = glob('/dbfs/mnt/ingestion/excel/*.xlsx')
-
+# MAGIC %run /Repos/ruan.pomponet@gmail.com/git-bricks-case/db_connetion
 
 # COMMAND ----------
 
-dfAppen = pd.DataFrame() 
+# MAGIC %md 
+# MAGIC #### set de variáveis
+
+# COMMAND ----------
+
+ingestion = '/dbfs/mnt/ingestion/excel/'
+files = os.listdir(ingestion)
+
+# COMMAND ----------
+
+# MAGIC %md 
+# MAGIC #### Import e consolidação dos arquivos xlsx em um dataframe
+
+# COMMAND ----------
+
+#Cria o datafreme que receberá os dados dos arquivos xlsx
+dfApp = pd.DataFrame() 
 
 for file in files:
-  df = pd.read_excel(file ,engine='openpyxl')
-  dfAppen = dfAppen.append(df)
-
-
-# COMMAND ----------
-
-# MAGIC %run /Users/ruan.pomponet@gmail.com/db_connetion
+  df = pd.read_excel(raw + file ,engine='openpyxl')
+  dfApp = dfApp.append(df)
 
 # COMMAND ----------
 
-df = spark.createDataFrame(dfAppen) 
+# MAGIC %md 
+# MAGIC #### Criação do spark dataframe, definição de schema e tratamendo de dados
 
 # COMMAND ----------
 
+#Converte do dataframe pandas para spark
+df = spark.createDataFrame(dfApp) 
+
+# COMMAND ----------
+
+#Cria novo dataframe padronizando campos
 dfVendas=[
               'ID_MARCA',
               'MARCA',
@@ -50,6 +70,7 @@ dfVendas=[
 
 # COMMAND ----------
 
+#Cria novo dataframe padronizado e insere data types
 creatTableDf = (df
                .withColumn('DATA_VENDA',to_date(col('DATA_VENDA'),'dd/MM/yyyy'))
                #tratamento de datas
@@ -61,9 +82,10 @@ creatTableDf = (df
 
 # COMMAND ----------
 
-createTableVendas = pyspark.sql.DataFrameWriter(creatTableDf)
-createTableVendas.jdbc(url=url, table="raw_vendas", mode ="overwrite", properties = properties)
+# MAGIC %md 
+# MAGIC #### Cria a tabela no Azure sql server
 
 # COMMAND ----------
 
-
+createTableVendas = pyspark.sql.DataFrameWriter(creatTableDf)
+createTableVendas.jdbc(url=url, table="raw_vendas", mode ="overwrite", properties = properties)
