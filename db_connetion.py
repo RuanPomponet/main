@@ -2,8 +2,9 @@
 jdbcHostname = "sql-case-coticario.database.windows.net"
 jdbcPort = "1433"
 jdbcDatabase = "bd-sql-case-boticario"
+conexaoSQLServerAzure = dbutils.secrets.get(scope="key-vault-secrets",key="conexaoSQLServerAzure")
 properties = {
  "user" : "case-bot",
- "password" : "Karazu@89" }
+ "password" : conexaoSQLServerAzure }
 
-url = "jdbc:sqlserver://{0}:{1};database={2}".format(jdbcHostname,jdbcPort,jdbcDatabase)
+url = f'jdbc:sqlserver://{jdbcHostname}:{jdbcPort};database={jdbcDatabase}'

@@ -1,21 +1,26 @@
 # Databricks notebook source
-import pytz
+# MAGIC %md 
+# MAGIC #### Import libs e conexões
+
+# COMMAND ----------
+
 from pyspark import SparkFiles
 import pyspark
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
-import pandas as pd
-import glob
-import os
-import pyodbc
-import sys
-spark.conf.set("spark.databricks.optimizer.dynamicPartitionPruning","true")
-spark.conf.set('spark.databricks.delta.retentionDurationCheck.enabled','false')
-sp_timezone = pytz.timezone('America/Sao_Paulo')
 
 # COMMAND ----------
 
-# MAGIC %run /Users/ruan.pomponet@gmail.com/db_connetion
+#Executa o notebook resposável pela conexão com azure sql server
+
+# COMMAND ----------
+
+# MAGIC %run /Repos/ruan.pomponet@gmail.com/git-bricks-case/db_connetion
+
+# COMMAND ----------
+
+# MAGIC %md 
+# MAGIC #### Cria o dataframe com os dados da tabela das vendas para manipulação
 
 # COMMAND ----------
 
@@ -24,6 +29,12 @@ dfSelect = spark.read.jdbc(url=url,table=selectQuery,properties=properties)
 
 # COMMAND ----------
 
+# MAGIC %md 
+# MAGIC #### Criação do spark dataframe, definição de schema e tratamendo de dados
+
+# COMMAND ----------
+
+#Cria novo dataframe padronizando campos
 dfMarcaAM = [
               'MARCA',
               'ANO',
@@ -33,15 +44,21 @@ dfMarcaAM = [
 
 # COMMAND ----------
 
+#Cria novo dataframe padronizado, insere data types e aplica lógica de agragacao para cria a visão de vendas consolidadas por ano/mes e marca
 dfMarcaAnoMes = ( dfSelect
                   .withColumn('ANO', year('DATA_VENDA'))
                   .withColumn('MES', lpad(month('DATA_VENDA'),2,'0'))
-                   #Transformação de datas
+                   #Tratamento de datas
                   .groupBy('ANO','MES','MARCA').agg(sum('QTD_VENDA').alias('TOTAL_VENDAS'))
                   .orderBy('ANO','MES')
                   .select(*dfMarcaAM)
                   
                 )
+
+# COMMAND ----------
+
+# MAGIC %md 
+# MAGIC #### Cria a tabela no Azure sql server
 
 # COMMAND ----------
 
